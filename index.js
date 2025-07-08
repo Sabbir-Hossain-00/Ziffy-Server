@@ -18,7 +18,7 @@ app.use(cookieParser());
 
 // verify token 
 const verifyToken = (req , res , next)=>{
-    const token = req.cookies ;
+    const token = req.cookies.token ;
     if(!token){
         return res.status(401).send({message : "Unauthorized"})
     }
@@ -29,6 +29,14 @@ const verifyToken = (req , res , next)=>{
         req.decoded = decoded ;
         next()
     })
+}
+
+const verifyEmail = (req , res , next)=>{
+    const email = req.email ;
+    if(req.decoded.email !== email){
+        return res.status(403).send({message : "Forbidden access"})
+    }
+    next()
 }
 
 
@@ -47,6 +55,10 @@ async function run() {
   try {
  
     await client.connect();
+
+    const db = client.db("ziffyData");
+    const userCollection =  db.collection("userCollection");
+    const postCollection = db.collection("postCollection")
 
  
     // jwt token create and set to cookie
@@ -70,6 +82,33 @@ async function run() {
         res.send({message : "logged out successfully"})
     })
 
+    // users post 
+    app.post("/user", async(req , res)=>{
+      const userData = req.body ;
+      userData.created_at = new Date().toISOString();
+      userData.role = "user";
+      const existingUser = await userCollection.findOne({email : userData?.email});
+      if(existingUser){
+        return res.send({message : "User Already Exist"})
+      }
+      const result = await userCollection.insertOne(userData);
+      res.send(result)
+    })
+
+    // post get method 
+    app.get("/all-post",verifyToken, async(req , res)=>{
+      const result = await postCollection.find().sort({created_at : -1}).toArray();
+      res.send(result)
+    })
+
+    // add post post method 
+    app.post("/post", async(req , res)=>{
+      const postData = req.body ;
+      postData.created_at = new Date().toISOString();
+      const result = await postCollection.insertOne(postData);
+      res.send(result)
+    })
+
 
 
 
@@ -79,7 +118,7 @@ async function run() {
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
