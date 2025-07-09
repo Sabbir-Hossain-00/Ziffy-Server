@@ -2,9 +2,10 @@ require('dotenv').config();
 const express = require('express')
 const app = express()
 const cors = require("cors")
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = 3000
 
 // midleware 
@@ -95,9 +96,18 @@ async function run() {
       res.send(result)
     })
 
-    // post get method 
+    // all-post get method 
     app.get("/all-post",verifyToken, async(req , res)=>{
       const result = await postCollection.find().sort({created_at : -1}).toArray();
+      res.send(result)
+    })
+
+
+    // sigle post get method
+    app.get("/post-details/:id", async(req , res)=>{
+      const id = req.params.id ;
+      const filter = {_id : new ObjectId(id)}
+      const result = await postCollection.findOne(filter);
       res.send(result)
     })
 
@@ -110,7 +120,17 @@ async function run() {
     })
 
 
+    // payment intent 
 
+    app.post("/create-payment-intent", async(req , res)=>{
+      const {amount} = req.body ;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount * 100 ,
+        currency : "usd",
+        payment_method_types: ["card"],
+      });
+      res.send(paymentIntent)
+    })
 
 
     // Send a ping to confirm a successful connection
