@@ -109,6 +109,16 @@ async function run() {
       const filter = {_id : new ObjectId(id)}
       const result = await postCollection.findOne(filter);
       res.send(result)
+    });
+
+    // get post by search
+    app.get("/search-post", async(req , res)=>{
+      const searchResult = req.query.tag ;
+      console.log(searchResult)
+      const result = await postCollection.find({
+        tag : {$regex: searchResult , $options:"i"}
+      }).toArray();
+      res.send(result)
     })
 
     // add post post method 
