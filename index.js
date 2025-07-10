@@ -166,24 +166,107 @@ async function run() {
     });
 
     // get comment for individual post
-    app.get("/post-comment", async(req , res)=>{
-      const postId = req.query.id ;
-      const query = {postId}
-      const result = await commentCollection.find(query).toArray()
-      res.send(result)
-    })
+    app.get("/post-comment", async (req, res) => {
+      const postId = req.query.id;
+      const query = { postId };
+      const result = await commentCollection.find(query).toArray();
+      res.send(result);
+    });
 
-
-    // comment post method 
-    app.post("/comment", async(req , res)=>{
-      const commentData = req.body ;
+    // comment post method
+    app.post("/comment", async (req, res) => {
+      const commentData = req.body;
       const result = await commentCollection.insertOne(commentData);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
+    // up vote and down vote patch and total vote count and update postCollection
+    // PATCH /vote/:postId
+    app.patch("/vote/:id", async (req, res) => {
+      try {
+        const postId = req.params.id;
+        const { email, vote } = req.body;
 
+        if (!email || !vote) {
+          return res
+            .status(400)
+            .send({ message: "Email and vote are required" });
+        }
 
+        const post = await postCollection.findOne({
+          _id: new ObjectId(postId),
+        });
+        if (!post) {
+          return res.status(404).send({ message: "Post not found" });
+        }
 
+        const existingVoter = post.voters?.find((v) => v.email === email);
+
+        let updateQuery = {};
+        let updateOptions = {}; // ✅ New: Only use arrayFilters conditionally
+
+        if (!existingVoter) {
+          // ✅ First time vote — no arrayFilters needed
+          updateQuery = {
+            $inc: { [vote === "up" ? "upVote" : "downVote"]: 1 },
+            $push: { voters: { email, vote } },
+          };
+        } else if (existingVoter.vote !== vote) {
+          // ✅ Switching vote — use arrayFilters
+          updateQuery = {
+            $inc: {
+              [vote === "up" ? "upVote" : "downVote"]: 1,
+              [vote === "up" ? "downVote" : "upVote"]: -1,
+            },
+            $set: {
+              "voters.$[elem].vote": vote,
+            },
+          };
+          updateOptions = {
+            arrayFilters: [{ "elem.email": email }],
+          };
+        } else {
+          // ✅ Already voted the same
+          return res.send({ message: "Already voted" });
+        }
+
+        // ✅ Apply update with or without arrayFilters
+        const updateResult = await postCollection.updateOne(
+          { _id: new ObjectId(postId) },
+          updateQuery,
+          updateOptions
+        );
+
+        // ✅ Aggregate totalVote = upVote - downVote
+        const [summary] = await postCollection
+          .aggregate([
+            { $match: { _id: new ObjectId(postId) } },
+            {
+              $project: {
+                upVote: 1,
+                downVote: 1,
+                totalVote: { $subtract: ["$upVote", "$downVote"] },
+              },
+            },
+          ])
+          .toArray();
+
+        // ✅ Update totalVote field
+        await postCollection.updateOne(
+          { _id: new ObjectId(postId) },
+          { $set: { totalVote: summary.totalVote } }
+        );
+
+        res.send({
+          message: "Vote updated successfully",
+          updateResult,
+          totalVote: summary.totalVote,
+        });
+      } catch (err) {
+        console.error("Vote error:", err);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
 
     // payment intent
     app.post("/create-payment-intent", async (req, res) => {
