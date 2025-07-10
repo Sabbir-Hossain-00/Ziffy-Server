@@ -290,7 +290,19 @@ async function run() {
         totalVote : -1 , created_at: -1
       }).toArray();
       res.send(result)
+    });
+
+
+
+
+    // report post api
+    app.post("/report",async(req , res)=>{
+      const reportData = req.body;
+      const result = await reportCollection.insertOne(reportData);
+      res.send(result)
     })
+
+
 
     // set payment at database api post
     app.post("/payments", async(req , res)=>{
