@@ -268,6 +268,14 @@ async function run() {
       }
     });
 
+    // short by popularity get 
+    app.get("/popular-post", async(req , res)=>{
+      const result = await postCollection.find().sort({
+        totalVote : -1 , created_at: -1
+      }).toArray();
+      res.send(result)
+    })
+
     // payment intent
     app.post("/create-payment-intent", async (req, res) => {
       const { amount } = req.body;
