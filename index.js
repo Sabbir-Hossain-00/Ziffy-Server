@@ -165,6 +165,14 @@ async function run() {
       res.send(result);
     });
 
+    // get comment for individual post
+    app.get("/post-comment", async(req , res)=>{
+      const postId = req.query.id ;
+      const query = {postId}
+      const result = await commentCollection.find(query).toArray()
+      res.send(result)
+    })
+
 
     // comment post method 
     app.post("/comment", async(req , res)=>{
