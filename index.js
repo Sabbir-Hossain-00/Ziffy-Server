@@ -60,6 +60,8 @@ async function run() {
     const userCollection = db.collection("userCollection");
     const postCollection = db.collection("postCollection");
     const commentCollection = db.collection("commentCollection");
+    const paymentCollection = db.collection("paymentCollection");
+    const reportCollection = db.collection("reportCollection")
 
     // jwt token create and set to cookie
     app.post("/jwt", async (req, res) => {
@@ -84,6 +86,12 @@ async function run() {
       });
       res.send({ message: "logged out successfully" });
     });
+
+    // users get 
+    app.get("/all-user", async(req , res)=>{
+      const result = await userCollection.find().toArray();
+      res.send(result)
+    })
 
     // users post
     app.post("/user", async (req, res) => {
@@ -156,6 +164,14 @@ async function run() {
         res.status(500).send({ message: "Internal server error" });
       }
     });
+
+    // mypost get method
+    app.get("/my-post", async(req , res)=>{
+      const email = req.query.email;
+      const filter = {authorEmail : email}
+      const result = await postCollection.find(filter).toArray();
+      res.send(result)
+    })
 
     // add post post method
     app.post("/post", async (req, res) => {
@@ -274,6 +290,27 @@ async function run() {
         totalVote : -1 , created_at: -1
       }).toArray();
       res.send(result)
+    })
+
+    // set payment at database api post
+    app.post("/payments", async(req , res)=>{
+      const paymentData = req.body ;
+      const result = await paymentCollection.insertOne(paymentData)
+      res.send(result)
+    })
+
+    // update user badge api 
+    app.patch("/set-badge", async(req , res)=>{
+      const email = req.query.email ;
+      const filter = {email}
+      const updateDoc = {
+        $set :{
+          verified : true,
+        }
+      }
+      const result = await userCollection.updateOne(filter , updateDoc);
+      res.send(result)
+      
     })
 
     // payment intent
