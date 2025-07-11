@@ -63,6 +63,7 @@ async function run() {
     const paymentCollection = db.collection("paymentCollection");
     const reportCollection = db.collection("reportCollection");
     const tagCollection = db.collection("tagCollection");
+    const announcementCollection =db.collection("announcementCollection");
 
     // jwt token create and set to cookie
     app.post("/jwt", async (req, res) => {
@@ -377,6 +378,13 @@ async function run() {
         $set: { role: "admin" },
       };
       const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    // post make announcement
+    app.post("/announcements", async (req, res) => {
+      const body = req.body;
+      const result = await announcementCollection.insertOne(body);
       res.send(result);
     });
 
