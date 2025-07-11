@@ -62,6 +62,7 @@ async function run() {
     const commentCollection = db.collection("commentCollection");
     const paymentCollection = db.collection("paymentCollection");
     const reportCollection = db.collection("reportCollection");
+    const tagCollection = db.collection("tagCollection");
 
     // jwt token create and set to cookie
     app.post("/jwt", async (req, res) => {
@@ -324,6 +325,37 @@ async function run() {
         });
       } catch (error) {
         res.status(500).send({ message: "Server error", error });
+      }
+    });
+
+    // get tag at tag collection
+    app.get("/tags", async (req, res) => {
+      const tags = await tagCollection.find().toArray();
+      res.send(tags);
+    });
+
+    // post tag at tagcollection
+    app.post("/add-tag", async (req, res) => {
+      const tagData = req.body;
+      if (!tagData) return res.status(400).send({ message: "Tag is required" });
+
+      const result = await tagCollection.insertOne(tagData);
+      res.send(result);
+    });
+
+    // admin profile stats
+    app.get("/site-stats", async (req, res) => {
+      try {
+        const [postCount, commentCount, userCount] = await Promise.all([
+          postCollection.countDocuments(),
+          commentCollection.countDocuments(),
+          userCollection.countDocuments(),
+        ]);
+
+        res.send({ postCount, commentCount, userCount });
+      } catch (error) {
+        console.error("Error fetching site stats:", error);
+        res.status(500).send({ error: "Internal Server Error" });
       }
     });
 
