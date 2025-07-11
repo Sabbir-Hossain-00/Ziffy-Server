@@ -63,7 +63,7 @@ async function run() {
     const paymentCollection = db.collection("paymentCollection");
     const reportCollection = db.collection("reportCollection");
     const tagCollection = db.collection("tagCollection");
-    const announcementCollection =db.collection("announcementCollection");
+    const announcementCollection = db.collection("announcementCollection");
 
     // jwt token create and set to cookie
     app.post("/jwt", async (req, res) => {
@@ -360,7 +360,7 @@ async function run() {
       }
     });
 
-    // 1️⃣ GET /users?email=xyz@gmail.com → search by email (partial match)
+    //  GET /users?email=xyz@gmail.com → search by email (partial match)
     app.get("/users", async (req, res) => {
       const name = req.query.name || "";
       const query = {
@@ -370,7 +370,7 @@ async function run() {
       res.send(users);
     });
 
-    // 2️⃣ PATCH /make-admin/:id → promote a user to admin
+    //  PATCH /make-admin/:id → promote a user to admin
     app.patch("/make-admin/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -392,6 +392,30 @@ async function run() {
     app.post("/payments", async (req, res) => {
       const paymentData = req.body;
       const result = await paymentCollection.insertOne(paymentData);
+      res.send(result);
+    });
+
+    //get all reported comment
+    app.get("/reported-comments", async (req, res) => {
+      const result = await db.collection("reportCollection").find().toArray();
+      res.send(result);
+    });
+
+    // delete comment by id
+    app.delete("/comments/:id", async (req, res) => {
+      const commentId = req.params.id;
+      const result = await commentCollection.deleteOne({
+        _id: new ObjectId(commentId),
+      });
+      res.send(result);
+    });
+
+    // dismiss report by id
+    app.delete("/dismiss-report/:id", async (req, res) => {
+      const reportId = req.params.id;
+      const result = await reportCollection.deleteOne({
+        _id: new ObjectId(reportId),
+      });
       res.send(result);
     });
 
