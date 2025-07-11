@@ -155,7 +155,7 @@ async function run() {
                 tag: "$_id",
               },
             },
-          ])
+          ]).limit(3)
           .toArray();
 
         // Map only tag names into an array
