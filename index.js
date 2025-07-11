@@ -359,6 +359,27 @@ async function run() {
       }
     });
 
+    // 1️⃣ GET /users?email=xyz@gmail.com → search by email (partial match)
+    app.get("/users", async (req, res) => {
+      const name = req.query.name || "";
+      const query = {
+        name: { $regex: name, $options: "i" }, // case-insensitive partial match
+      };
+      const users = await userCollection.find(query).toArray();
+      res.send(users);
+    });
+
+    // 2️⃣ PATCH /make-admin/:id → promote a user to admin
+    app.patch("/make-admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { role: "admin" },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
     // set payment at database api post
     app.post("/payments", async (req, res) => {
       const paymentData = req.body;
