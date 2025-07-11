@@ -61,7 +61,7 @@ async function run() {
     const postCollection = db.collection("postCollection");
     const commentCollection = db.collection("commentCollection");
     const paymentCollection = db.collection("paymentCollection");
-    const reportCollection = db.collection("reportCollection")
+    const reportCollection = db.collection("reportCollection");
 
     // jwt token create and set to cookie
     app.post("/jwt", async (req, res) => {
@@ -87,11 +87,11 @@ async function run() {
       res.send({ message: "logged out successfully" });
     });
 
-    // users get 
-    app.get("/all-user", async(req , res)=>{
+    // users get
+    app.get("/all-user", async (req, res) => {
       const result = await userCollection.find().toArray();
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // users post
     app.post("/user", async (req, res) => {
@@ -166,12 +166,12 @@ async function run() {
     });
 
     // mypost get method
-    app.get("/my-post", async(req , res)=>{
+    app.get("/my-post", async (req, res) => {
       const email = req.query.email;
-      const filter = {authorEmail : email}
+      const filter = { authorEmail: email };
       const result = await postCollection.find(filter).toArray();
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // add post post method
     app.post("/post", async (req, res) => {
@@ -284,46 +284,68 @@ async function run() {
       }
     });
 
-    // short by popularity get 
-    app.get("/popular-post", async(req , res)=>{
-      const result = await postCollection.find().sort({
-        totalVote : -1 , created_at: -1
-      }).toArray();
-      res.send(result)
+    // short by popularity get
+    app.get("/popular-post", async (req, res) => {
+      const result = await postCollection
+        .find()
+        .sort({
+          totalVote: -1,
+          created_at: -1,
+        })
+        .toArray();
+      res.send(result);
     });
 
-
-
-
     // report post api
-    app.post("/report",async(req , res)=>{
+    app.post("/report", async (req, res) => {
       const reportData = req.body;
       const result = await reportCollection.insertOne(reportData);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
+    // GET user profile and 3 recent posts
+    app.get("/user-profile", async (req, res) => {
+      const email = req.query.email;
 
+      try {
+        const user = await db.collection("userCollection").findOne({ email });
+        if (!user) return res.status(404).send({ message: "User not found" });
+
+        const posts = await db
+          .collection("postCollection")
+          .find({ authorEmail: email })
+          .sort({ created_at: -1 })
+          .limit(3)
+          .toArray();
+
+        res.send({
+          user,
+          posts,
+        });
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error });
+      }
+    });
 
     // set payment at database api post
-    app.post("/payments", async(req , res)=>{
-      const paymentData = req.body ;
-      const result = await paymentCollection.insertOne(paymentData)
-      res.send(result)
-    })
+    app.post("/payments", async (req, res) => {
+      const paymentData = req.body;
+      const result = await paymentCollection.insertOne(paymentData);
+      res.send(result);
+    });
 
-    // update user badge api 
-    app.patch("/set-badge", async(req , res)=>{
-      const email = req.query.email ;
-      const filter = {email}
+    // update user badge api
+    app.patch("/set-badge", async (req, res) => {
+      const email = req.query.email;
+      const filter = { email };
       const updateDoc = {
-        $set :{
-          verified : true,
-        }
-      }
-      const result = await userCollection.updateOne(filter , updateDoc);
-      res.send(result)
-      
-    })
+        $set: {
+          badge: "gold",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
 
     // payment intent
     app.post("/create-payment-intent", async (req, res) => {
