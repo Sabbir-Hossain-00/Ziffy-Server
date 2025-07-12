@@ -155,7 +155,8 @@ async function run() {
                 tag: "$_id",
               },
             },
-          ]).limit(3)
+          ])
+          .limit(3)
           .toArray();
 
         // Map only tag names into an array
@@ -175,6 +176,14 @@ async function run() {
       res.send(result);
     });
 
+    // mypost count get method
+    app.get("/myPost-count", async(req , res)=>{
+      const email = req.query.email;
+      const filter = { authorEmail: email };
+      const result = await postCollection.countDocuments(filter);
+      res.send(result)
+    })
+
     // add post post method
     app.post("/post", async (req, res) => {
       const postData = req.body;
@@ -191,9 +200,59 @@ async function run() {
       res.send(result);
     });
 
+    // post-summary api
+    app.get("/post-summary/:id", async (req, res) => {
+      try {
+        const postId = new ObjectId(req.params.id);
+
+        const result = await postCollection
+          .aggregate([
+            {
+              $match: { _id: new ObjectId(req.params.id) },
+            },
+            {
+              $lookup: {
+                from: "commentCollection", // change to your actual comment collection name
+                let: { postIdStr: { $toString: "$_id" } },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ["$postId", "$$postIdStr"],
+                      },
+                    },
+                  },
+                ],
+                as: "comments",
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                upVote: 1,
+                downVote: 1,
+                totalVote:1,
+                commentsCount: { $size: "$comments" },
+              },
+            },
+          ])
+          .toArray();
+
+        if (!result.length) {
+          return res.status(404).json({ message: "Post not found" });
+        }
+
+        res.send(result[0]);
+      } catch (err) {
+        console.error("Post summary error:", err);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+
     // comment post method
     app.post("/comment", async (req, res) => {
       const commentData = req.body;
+      commentData.created_at = new Date().toISOString();
       const result = await commentCollection.insertOne(commentData);
       res.send(result);
     });
