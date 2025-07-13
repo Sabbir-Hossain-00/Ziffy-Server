@@ -495,10 +495,12 @@ async function run() {
     // update user badge api
     app.patch("/set-badge", async (req, res) => {
       const email = req.query.email;
+      const {plan} = req.body ;
       const filter = { email };
       const updateDoc = {
         $set: {
           badge: "gold",
+          plan,
         },
       };
       const result = await userCollection.updateOne(filter, updateDoc);
