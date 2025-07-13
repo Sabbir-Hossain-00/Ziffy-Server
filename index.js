@@ -95,12 +95,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/user", async(req ,res)=>{
-      const email = req.query.email ;
-      const filter = {email}
+    app.get("/user", async (req, res) => {
+      const email = req.query.email;
+      const filter = { email };
       const result = await userCollection.findOne(filter);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // users post
     app.post("/user", async (req, res) => {
@@ -118,12 +118,41 @@ async function run() {
     });
 
     // all-post get method
-    app.get("/all-post", verifyToken, async (req, res) => {
-      const result = await postCollection
+    app.get("/all-post", async (req, res) => {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const skip = (page - 1) * limit;
+      const [posts , total] = await Promise.all([
+        postCollection
         .find()
         .sort({ created_at: -1 })
-        .toArray();
-      res.send(result);
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+        postCollection.estimatedDocumentCount()
+      ])
+      res.send({
+        posts,
+        totalPages: Math.ceil(total / limit)
+      });
+    });
+
+    app.get("/pagination-post", async (req, res) => {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const skip = (page - 1) * limit;
+
+      const [posts, total] = await Promise.all([
+        postCollection.find().sort({ created_at: -1 }).skip(skip).limit(limit).toArray(),
+        postCollection.estimatedDocumentCount(),
+      ]);
+
+      res.send({
+        posts,
+        totalPages: Math.ceil(total / limit),
+      });
     });
 
     // sigle post get method
@@ -137,13 +166,26 @@ async function run() {
     // get post by search
     app.get("/search-post", async (req, res) => {
       const searchResult = req.query.tag;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const skip = (page - 1) * limit;
+
       console.log(searchResult);
-      const result = await postCollection
+      const [posts , total] = await Promise.all([
+        postCollection
         .find({
           tag: { $regex: searchResult, $options: "i" },
         })
-        .toArray();
-      res.send(result);
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+        postCollection.estimatedDocumentCount()
+      ])
+      res.send({
+        posts,
+        totalPages: Math.ceil(total / limit)
+      });
     });
 
     // get all teh tags
@@ -183,20 +225,20 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/delete-my-post/:id" , async (req , res)=>{
-      const id = req.params.id ;
-      const query = {_id : new ObjectId(id)};
+    app.delete("/delete-my-post/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
       const result = await postCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // mypost count get method
-    app.get("/myPost-count", async(req , res)=>{
+    app.get("/myPost-count", async (req, res) => {
       const email = req.query.email;
       const filter = { authorEmail: email };
       const result = await postCollection.countDocuments(filter);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // add post post method
     app.post("/post", async (req, res) => {
@@ -245,7 +287,7 @@ async function run() {
                 _id: 0,
                 upVote: 1,
                 downVote: 1,
-                totalVote:1,
+                totalVote: 1,
                 commentsCount: { $size: "$comments" },
               },
             },
@@ -361,14 +403,26 @@ async function run() {
 
     // short by popularity get
     app.get("/popular-post", async (req, res) => {
-      const result = await postCollection
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const skip = (page - 1) * limit;
+      const [posts , total] = await Promise.all([
+        postCollection
         .find()
         .sort({
           totalVote: -1,
           created_at: -1,
         })
-        .toArray();
-      res.send(result);
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+        postCollection.estimatedDocumentCount()
+      ])
+      res.send({
+        posts ,
+        totalPages: Math.ceil(total / limit)
+      });
     });
 
     // report post api
@@ -383,11 +437,10 @@ async function run() {
       const email = req.query.email;
 
       try {
-        const user = await db.collection("userCollection").findOne({ email });
+        const user = await userCollection.findOne({ email });
         if (!user) return res.status(404).send({ message: "User not found" });
 
-        const posts = await db
-          .collection("postCollection")
+        const posts = await postCollection
           .find({ authorEmail: email })
           .sort({ created_at: -1 })
           .limit(3)
@@ -495,7 +548,7 @@ async function run() {
     // update user badge api
     app.patch("/set-badge", async (req, res) => {
       const email = req.query.email;
-      const {plan} = req.body ;
+      const { plan } = req.body;
       const filter = { email };
       const updateDoc = {
         $set: {
