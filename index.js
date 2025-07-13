@@ -183,6 +183,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/delete-my-post/:id" , async (req , res)=>{
+      const id = req.params.id ;
+      const query = {_id : new ObjectId(id)};
+      const result = await postCollection.deleteOne(query);
+      res.send(result)
+    })
+
     // mypost count get method
     app.get("/myPost-count", async(req , res)=>{
       const email = req.query.email;
