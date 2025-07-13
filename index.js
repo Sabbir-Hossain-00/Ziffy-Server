@@ -507,6 +507,21 @@ async function run() {
       res.send(result);
     });
 
+    // get announcment 
+    app.get("/announcments", async(req ,res)=>{
+      const result = await announcementCollection.find().toArray();
+      res.send(result)
+    })
+
+    // delete announcement 
+
+    app.delete("/delete-announcement/:id" , async(req ,res)=>{
+      const id = req.params.id ;
+      const query = {_id : new ObjectId(id)}
+      const result = await announcementCollection.deleteOne(query);
+      res.send(result)
+    })
+
     // post make announcement
     app.post("/announcements", async (req, res) => {
       const body = req.body;
