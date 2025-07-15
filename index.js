@@ -65,6 +65,16 @@ async function run() {
     const tagCollection = db.collection("tagCollection");
     const announcementCollection = db.collection("announcementCollection");
 
+    // verify admin api
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const user = await userCollection.findOne({ email });
+      if (!user || user?.role !== "admin") {
+        return res.status(403).send({ message: "Access denied" });
+      }
+      next();
+    };
+
     // jwt token create and set to cookie
     app.post("/jwt", async (req, res) => {
       const { email } = req.body;
@@ -95,7 +105,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/user",verifyToken,verifyEmail, async (req, res) => {
+    app.get("/user", verifyToken, verifyEmail, async (req, res) => {
       const email = req.query.email;
       const filter = { email };
       const result = await userCollection.findOne(filter);
@@ -123,18 +133,18 @@ async function run() {
       const limit = parseInt(req.query.limit) || 10;
 
       const skip = (page - 1) * limit;
-      const [posts , total] = await Promise.all([
+      const [posts, total] = await Promise.all([
         postCollection
-        .find()
-        .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-        postCollection.countDocuments()
-      ])
+          .find()
+          .sort({ created_at: -1 })
+          .skip(skip)
+          .limit(limit)
+          .toArray(),
+        postCollection.countDocuments(),
+      ]);
       res.send({
         posts,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
       });
     });
 
@@ -145,7 +155,12 @@ async function run() {
       const skip = (page - 1) * limit;
 
       const [posts, total] = await Promise.all([
-        postCollection.find().sort({ created_at: -1 }).skip(skip).limit(limit).toArray(),
+        postCollection
+          .find()
+          .sort({ created_at: -1 })
+          .skip(skip)
+          .limit(limit)
+          .toArray(),
         postCollection.estimatedDocumentCount(),
       ]);
 
@@ -156,7 +171,7 @@ async function run() {
     });
 
     // sigle post get method
-    app.get("/post-details/:id",verifyToken, async (req, res) => {
+    app.get("/post-details/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await postCollection.findOne(filter);
@@ -171,21 +186,17 @@ async function run() {
 
       const skip = (page - 1) * limit;
       const query = {
-          tag: { $regex: searchResult, $options: "i" },
-        }
+        tag: { $regex: searchResult, $options: "i" },
+      };
 
       console.log(searchResult);
-      const [posts , total] = await Promise.all([
-        postCollection
-        .find(query)
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-        postCollection.countDocuments(query)
-      ])
+      const [posts, total] = await Promise.all([
+        postCollection.find(query).skip(skip).limit(limit).toArray(),
+        postCollection.countDocuments(query),
+      ]);
       res.send({
         posts,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
       });
     });
 
@@ -218,14 +229,14 @@ async function run() {
     });
 
     // mypost get method
-    app.get("/my-post",verifyToken,verifyEmail, async (req, res) => {
+    app.get("/my-post", verifyToken, verifyEmail, async (req, res) => {
       const email = req.query.email;
       const filter = { authorEmail: email };
       const result = await postCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.delete("/delete-my-post/:id",verifyToken, async (req, res) => {
+    app.delete("/delete-my-post/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await postCollection.deleteOne(query);
@@ -233,7 +244,7 @@ async function run() {
     });
 
     // mypost count get method
-    app.get("/myPost-count",verifyToken,verifyEmail, async (req, res) => {
+    app.get("/myPost-count", verifyToken, verifyEmail, async (req, res) => {
       const email = req.query.email;
       const filter = { authorEmail: email };
       const result = await postCollection.countDocuments(filter);
@@ -241,7 +252,7 @@ async function run() {
     });
 
     // add post post method
-    app.post("/post",verifyToken, async (req, res) => {
+    app.post("/post", verifyToken, async (req, res) => {
       const postData = req.body;
       postData.created_at = new Date().toISOString();
       const result = await postCollection.insertOne(postData);
@@ -249,7 +260,7 @@ async function run() {
     });
 
     // get comment for individual post
-    app.get("/post-comment",verifyToken, async (req, res) => {
+    app.get("/post-comment", verifyToken, async (req, res) => {
       const postId = req.query.id;
       const query = { postId };
       const result = await commentCollection.find(query).toArray();
@@ -306,7 +317,7 @@ async function run() {
     });
 
     // comment post method
-    app.post("/comment",verifyToken, async (req, res) => {
+    app.post("/comment", verifyToken, async (req, res) => {
       const commentData = req.body;
       commentData.created_at = new Date().toISOString();
       const result = await commentCollection.insertOne(commentData);
@@ -315,7 +326,7 @@ async function run() {
 
     // up vote and down vote patch and total vote count and update postCollection
     // PATCH /vote/:postId
-    app.patch("/vote/:id",verifyToken, async (req, res) => {
+    app.patch("/vote/:id", verifyToken, async (req, res) => {
       try {
         const postId = req.params.id;
         const { email, vote } = req.body;
@@ -407,33 +418,33 @@ async function run() {
       const limit = parseInt(req.query.limit) || 10;
 
       const skip = (page - 1) * limit;
-      const [posts , total] = await Promise.all([
+      const [posts, total] = await Promise.all([
         postCollection
-        .find()
-        .sort({
-          totalVote: -1,
-          created_at: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-        postCollection.countDocuments()
-      ])
+          .find()
+          .sort({
+            totalVote: -1,
+            created_at: -1,
+          })
+          .skip(skip)
+          .limit(limit)
+          .toArray(),
+        postCollection.countDocuments(),
+      ]);
       res.send({
-        posts ,
-        totalPages: Math.ceil(total / limit)
+        posts,
+        totalPages: Math.ceil(total / limit),
       });
     });
 
     // report post api
-    app.post("/report",verifyToken, async (req, res) => {
+    app.post("/report", verifyToken, async (req, res) => {
       const reportData = req.body;
       const result = await reportCollection.insertOne(reportData);
       res.send(result);
     });
 
     // GET user profile and 3 recent posts
-    app.get("/user-profile",verifyToken,verifyEmail, async (req, res) => {
+    app.get("/user-profile", verifyToken, verifyEmail, async (req, res) => {
       const email = req.query.email;
 
       try {
@@ -456,13 +467,13 @@ async function run() {
     });
 
     // get tag at tag collection
-    app.get("/tags",verifyToken, async (req, res) => {
+    app.get("/tags", verifyToken, async (req, res) => {
       const tags = await tagCollection.find().toArray();
       res.send(tags);
     });
 
     // post tag at tagcollection
-    app.post("/add-tag",verifyToken, async (req, res) => {
+    app.post("/add-tag", verifyToken, async (req, res) => {
       const tagData = req.body;
       if (!tagData) return res.status(400).send({ message: "Tag is required" });
 
@@ -471,7 +482,7 @@ async function run() {
     });
 
     // admin profile stats
-    app.get("/site-stats",verifyToken, async (req, res) => {
+    app.get("/site-stats", verifyToken, async (req, res) => {
       try {
         const [postCount, commentCount, userCount] = await Promise.all([
           postCollection.countDocuments(),
@@ -487,7 +498,7 @@ async function run() {
     });
 
     //  GET /users?email=xyz@gmail.com → search by email (partial match)
-    app.get("/users",verifyToken, async (req, res) => {
+    app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
       const name = req.query.name || "";
       const query = {
         name: { $regex: name, $options: "i" }, // case-insensitive partial match
@@ -497,7 +508,7 @@ async function run() {
     });
 
     //  PATCH /make-admin/:id → promote a user to admin
-    app.patch("/make-admin/:id",verifyToken, async (req, res) => {
+    app.patch("/make-admin/:id", verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -507,43 +518,43 @@ async function run() {
       res.send(result);
     });
 
-    // get announcment 
-    app.get("/announcments", async(req ,res)=>{
+    // get announcment
+    app.get("/announcments", async (req, res) => {
       const result = await announcementCollection.find().toArray();
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    // delete announcement 
+    // delete announcement
 
-    app.delete("/delete-announcement/:id" , async(req ,res)=>{
-      const id = req.params.id ;
-      const query = {_id : new ObjectId(id)}
+    app.delete("/delete-announcement/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
       const result = await announcementCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // post make announcement
-    app.post("/announcements",verifyToken, async (req, res) => {
+    app.post("/announcements", verifyToken,verifyAdmin, async (req, res) => {
       const body = req.body;
       const result = await announcementCollection.insertOne(body);
       res.send(result);
     });
 
     // set payment at database api post
-    app.post("/payments",verifyToken, async (req, res) => {
+    app.post("/payments", verifyToken, async (req, res) => {
       const paymentData = req.body;
       const result = await paymentCollection.insertOne(paymentData);
       res.send(result);
     });
 
     //get all reported comment
-    app.get("/reported-comments",verifyToken, async (req, res) => {
+    app.get("/reported-comments", verifyToken,verifyAdmin, async (req, res) => {
       const result = await db.collection("reportCollection").find().toArray();
       res.send(result);
     });
 
     // delete comment by id
-    app.delete("/comments/:id",verifyToken, async (req, res) => {
+    app.delete("/comments/:id", verifyToken,verifyAdmin, async (req, res) => {
       const commentId = req.params.id;
       const result = await commentCollection.deleteOne({
         _id: new ObjectId(commentId),
@@ -552,7 +563,7 @@ async function run() {
     });
 
     // dismiss report by id
-    app.delete("/dismiss-report/:id",verifyToken, async (req, res) => {
+    app.delete("/dismiss-report/:id", verifyToken,verifyAdmin, async (req, res) => {
       const reportId = req.params.id;
       const result = await reportCollection.deleteOne({
         _id: new ObjectId(reportId),
@@ -561,7 +572,7 @@ async function run() {
     });
 
     // update user badge api
-    app.patch("/set-badge",verifyToken,verifyEmail, async (req, res) => {
+    app.patch("/set-badge", verifyToken, verifyEmail, async (req, res) => {
       const email = req.query.email;
       const { plan } = req.body;
       const filter = { email };
