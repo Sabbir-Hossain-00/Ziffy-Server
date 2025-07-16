@@ -11,7 +11,7 @@ const port = 3000;
 // midleware
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173","https://ziffy-00.web.app"],
     credentials: true,
   })
 );
@@ -53,7 +53,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     // collections
     const db = client.db("ziffyData");
@@ -85,7 +85,8 @@ async function run() {
       res
         .cookie("token", token, {
           httpOnly: true,
-          secure: false,
+          secure: true,
+          sameSite:"none",
         })
         .send({ success: true });
     });
@@ -189,7 +190,7 @@ async function run() {
         tag: { $regex: searchResult, $options: "i" },
       };
 
-      console.log(searchResult);
+      // console.log(searchResult);
       const [posts, total] = await Promise.all([
         postCollection.find(query).skip(skip).limit(limit).toArray(),
         postCollection.countDocuments(query),
@@ -526,7 +527,7 @@ async function run() {
 
     // delete announcement
 
-    app.delete("/delete-announcement/:id", async (req, res) => {
+    app.delete("/delete-announcement/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await announcementCollection.deleteOne(query);
@@ -598,10 +599,10 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
