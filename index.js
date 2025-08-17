@@ -437,6 +437,12 @@ async function run() {
       });
     });
 
+    app.get("/popular", async(req , res)=>{
+      const result = await postCollection.find().toArray();
+      const popularPost = result.filter((item)=> item.totalVote >= 2)
+      res.send(popularPost)
+    })
+
     // report post api
     app.post("/report", verifyToken, async (req, res) => {
       const reportData = req.body;
