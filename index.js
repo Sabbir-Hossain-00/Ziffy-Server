@@ -554,7 +554,7 @@ async function run() {
       res.send(result);
     });
 
-    
+
     //get all reported comment
     app.get(
       "/reported-comments",
@@ -574,6 +574,7 @@ async function run() {
       });
       res.send(result);
     });
+    
 
     // dismiss report by id
     app.delete(
