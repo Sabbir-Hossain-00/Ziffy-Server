@@ -33,6 +33,7 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+
 const verifyEmail = (req, res, next) => {
   const email = req.query.email;
   if (req.decoded.email !== email) {
@@ -574,7 +575,7 @@ async function run() {
       });
       res.send(result);
     });
-    
+
 
     // dismiss report by id
     app.delete(
