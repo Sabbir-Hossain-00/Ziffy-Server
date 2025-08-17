@@ -11,7 +11,7 @@ const port = 3000;
 // midleware
 app.use(
   cors({
-    origin: ["http://localhost:5173","https://ziffy-00.web.app"],
+    origin: ["http://localhost:5173", "https://ziffy-00.web.app"],
     credentials: true,
   })
 );
@@ -86,7 +86,7 @@ async function run() {
         .cookie("token", token, {
           httpOnly: true,
           secure: true,
-          sameSite:"none",
+          sameSite: "none",
         })
         .send({ success: true });
     });
@@ -437,11 +437,11 @@ async function run() {
       });
     });
 
-    app.get("/popular", async(req , res)=>{
+    app.get("/popular", async (req, res) => {
       const result = await postCollection.find().toArray();
-      const popularPost = result.filter((item)=> item.totalVote >= 2)
-      res.send(popularPost)
-    })
+      const popularPost = result.filter((item) => item.totalVote >= 2);
+      res.send(popularPost);
+    });
 
     // report post api
     app.post("/report", verifyToken, async (req, res) => {
@@ -488,7 +488,6 @@ async function run() {
       res.send(result);
     });
 
-    
     // admin profile stats
     app.get("/site-stats", verifyToken, async (req, res) => {
       try {
@@ -506,7 +505,7 @@ async function run() {
     });
 
     //  GET /users?email=xyz@gmail.com → search by email (partial match)
-    app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const name = req.query.name || "";
       const query = {
         name: { $regex: name, $options: "i" }, // case-insensitive partial match
@@ -516,7 +515,7 @@ async function run() {
     });
 
     //  PATCH /make-admin/:id → promote a user to admin
-    app.patch("/make-admin/:id", verifyToken,verifyAdmin, async (req, res) => {
+    app.patch("/make-admin/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -534,7 +533,7 @@ async function run() {
 
     // delete announcement
 
-    app.delete("/delete-announcement/:id",verifyToken, async (req, res) => {
+    app.delete("/delete-announcement/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await announcementCollection.deleteOne(query);
@@ -542,7 +541,7 @@ async function run() {
     });
 
     // post make announcement
-    app.post("/announcements", verifyToken,verifyAdmin, async (req, res) => {
+    app.post("/announcements", verifyToken, verifyAdmin, async (req, res) => {
       const body = req.body;
       const result = await announcementCollection.insertOne(body);
       res.send(result);
@@ -556,13 +555,18 @@ async function run() {
     });
 
     //get all reported comment
-    app.get("/reported-comments", verifyToken,verifyAdmin, async (req, res) => {
-      const result = await db.collection("reportCollection").find().toArray();
-      res.send(result);
-    });
+    app.get(
+      "/reported-comments",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await db.collection("reportCollection").find().toArray();
+        res.send(result);
+      }
+    );
 
     // delete comment by id
-    app.delete("/comments/:id", verifyToken,verifyAdmin, async (req, res) => {
+    app.delete("/comments/:id", verifyToken, verifyAdmin, async (req, res) => {
       const commentId = req.params.id;
       const result = await commentCollection.deleteOne({
         _id: new ObjectId(commentId),
@@ -571,13 +575,18 @@ async function run() {
     });
 
     // dismiss report by id
-    app.delete("/dismiss-report/:id", verifyToken,verifyAdmin, async (req, res) => {
-      const reportId = req.params.id;
-      const result = await reportCollection.deleteOne({
-        _id: new ObjectId(reportId),
-      });
-      res.send(result);
-    });
+    app.delete(
+      "/dismiss-report/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const reportId = req.params.id;
+        const result = await reportCollection.deleteOne({
+          _id: new ObjectId(reportId),
+        });
+        res.send(result);
+      }
+    );
 
     // update user badge api
     app.patch("/set-badge", verifyToken, verifyEmail, async (req, res) => {
